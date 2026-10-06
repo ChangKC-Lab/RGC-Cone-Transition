@@ -1,0 +1,166 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+set.seed(3345678)
+```
+
+## Human retina
+
+### Load data
+
+Datasets: GSE268630
+
+```{r}
+#| include: false
+
+# S1
+counts <- Read10X_h5(filename = paste0(getwd(), "/dataset/GSE268630_Multi_Fetal_11w2d_NR_filtered_feature_bc_matrix.h5"))
+counts <- counts$`Gene Expression`
+seu_obj_hs_1 <- CreateSeuratObject(counts = counts, project = "Fetal retina", min.cells = 3)
+seu_obj_hs_1$age <- "79D"
+seu_obj_hs_1$species <- "Human"
+seu_obj_hs_1$bio_group <- "Fetal"
+
+# S2
+counts <- Read10X_h5(filename = paste0(getwd(), "/dataset/GSE268630_Multi_Fetal_19w4d_NR_filtered_feature_bc_matrix.h5"))
+counts <- counts$`Gene Expression`
+seu_obj_hs_2 <- CreateSeuratObject(counts = counts, project = "Fetal retina", min.cells = 3)
+seu_obj_hs_2$age <- "137D"
+seu_obj_hs_2$species <- "Human"
+seu_obj_hs_2$bio_group <- "Fetal"
+
+# S3
+counts <- Read10X_h5(filename = paste0(getwd(), "/dataset/GSE268630_Multi_Fetal_23w1d_NR_filtered_feature_bc_matrix.h5"))
+counts <- counts$`Gene Expression`
+seu_obj_hs_3 <- CreateSeuratObject(counts = counts, project = "Fetal retina", min.cells = 3)
+seu_obj_hs_3$age <- "162D"
+seu_obj_hs_3$species <- "Human"
+seu_obj_hs_3$bio_group <- "Fetal"
+```
+
+### QC and filtration
+
+```{r}
+#| echo: false
+
+seu_obj_hs_1[["percent.mt"]] <- PercentageFeatureSet(seu_obj_hs_1, pattern = "^MT-")
+seu_obj_hs_1_filtered <- subset(seu_obj_hs_1, subset = nFeature_RNA > 200 & nFeature_RNA < 10000 & percent.mt < 5)
+
+seu_obj_hs_2[["percent.mt"]] <- PercentageFeatureSet(seu_obj_hs_2, pattern = "^MT-")
+seu_obj_hs_2_filtered <- subset(seu_obj_hs_2, subset = nFeature_RNA > 200 & nFeature_RNA < 10000 & percent.mt < 7)
+
+seu_obj_hs_3[["percent.mt"]] <- PercentageFeatureSet(seu_obj_hs_3, pattern = "^MT-")
+seu_obj_hs_3_filtered <- subset(seu_obj_hs_3, subset = nFeature_RNA > 200 & nFeature_RNA < 10000 & percent.mt < 10)
+```
+
+### Preprocessing
+
+```{r}
+#| include: false
+
+seu_obj_hs_list <- list(seu_obj_hs_1_filtered, seu_obj_hs_2_filtered, seu_obj_hs_3_filtered)
+seu_obj_hs_list <- lapply(seu_obj_hs_list, function(x) {
+  x <- NormalizeData(x) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% FindNeighbors(dims = 1:30) %>% FindClusters(resolution = 0.2)
+  return(x)
+})
+```
+
+### Doublets removal
+
+```{r}
+#| echo: false
+
+library(DoubletFinder)
+
+# Doulets should use a list to analyze
+
+# 10X multiplet rate estimation table
+get_10x_multiplet_rate <- function(cells_recovered) {
+  cells <- c(500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000)
+  rate  <- c(0.004, 0.008, 0.016, 0.023, 0.031, 0.039, 0.046, 0.054, 0.061, 0.069, 0.076)
+  
+  if (cells_recovered <= max(cells)) {
+    rate <- approx(
+      x = cells,
+      y = rate,
+      xout = cells_recovered,
+      rule = 2
+    )$y
+  } else {
+    rate <- (cells_recovered / 1000) * 0.008
+  }
+  return(rate)
+}
+
+est_rate <- sapply(seu_obj_hs_list, function(x) {
+  cells_recovered <- ncol(x)
+  return(get_10x_multiplet_rate(cells_recovered))
+})
+
+# pK Identification (no ground-truth)
+seu_obj_hs_list <- lapply(seq_along(seu_obj_hs_list), function(i) {
+  
+  set.seed(42)
+  
+  x <- seu_obj_hs_list[[i]]
+  sweep_list <- paramSweep(x, PCs = 1:30, sct = FALSE)
+  sweep_stats <- summarizeSweep(sweep_list, GT = FALSE)
+  bcmvn <- find.pK(sweep_stats)
+  pK <- bcmvn %>% filter(BCmetric == max(BCmetric)) %>% select(pK)
+  pK <- as.numeric(as.character(pK[[1]]))
+  
+  # Homotypic doublet proportion estimate
+  annotations <- x@meta.data$seurat_clusters
+  homotypic_prop <- modelHomotypic(annotations)
+  nExp_poi <- round(est_rate[i] * nrow(x@meta.data))
+  nExp_poi.adj <- round(nExp_poi * (1 - homotypic_prop))
+  
+  # Run DoubletFinder
+  x <- doubletFinder(
+    x,
+    PCs = 1:30,
+    pN = 0.25,
+    pK = pK,
+    nExp = nExp_poi.adj,
+    sct = FALSE
+  )
+  colnames(x@meta.data)[grepl("DF.classifications.*", colnames(x@meta.data))] <- "doublet_finder"
+  # Number of singlets and doublets
+  print(table(x@meta.data$doublet_finder))
+  # Removing doublets
+  x <- subset(x, subset = doublet_finder %in% "Singlet")
+  return(x)
+})
+```
+
+### Merge data and integration
+
+```{r}
+#| include: false
+seu_obj_hs <- merge(seu_obj_hs_list[[1]], y = seu_obj_hs_list[-1])
+
+seu_obj_hs <- NormalizeData(seu_obj_hs) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% FindNeighbors(dims = 1:30) %>% FindClusters(resolution = 0.2, cluster.name = "unintegrated_clusters") %>% RunUMAP(dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
+
+seu_obj_hs <- IntegrateLayers(object = seu_obj_hs, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca", verbose = FALSE)
+
+seu_obj_hs <- FindNeighbors(seu_obj_hs, reduction = "integrated.cca", dims = 1:30) %>% FindClusters(resolution = 0.2, cluster.name = "cca_clusters") %>% RunUMAP(reduction = "integrated.cca", dims = 1:30, reduction.name = "umap.cca")
+
+seu_obj_hs <- JoinLayers(seu_obj_hs)
+```
+
+```{r}
+#| include: false
+
+saveRDS(seu_obj_hs, file = "processed_dataset/HsRetina_filtered_integrated.rds")
+```

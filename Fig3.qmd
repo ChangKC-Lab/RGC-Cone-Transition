@@ -1,0 +1,376 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+figure_output <- paste0(getwd(), "/figures")
+```
+
+### Define cell markers
+
+```{r}
+mk_photoreceptor <- c("Otx2", "Crx", "Nrl", "Rcvrn")
+mk_rod <- c("Abca4", "Prph2", "Nr2e3", "Rho")
+mk_cone <- c("Ccdc136", "Thrb", "Rxrg", "Arr3")
+```
+
+## Mouse Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_mm <- readRDS(paste0(getwd(), "/processed_dataset/MmRetina_filtered_integrated.rds"))
+```
+
+### Group assignment
+
+```{r}
+# All
+seu_obj_mm$exp_group <- "Others"
+# POU4F2 and RCVRN
+seu_obj_mm$exp_group[WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn > 0)] <- "Pou4f2/Rcvrn"
+# POU4F2 only
+seu_obj_mm$exp_group[WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn <= 0)] <- "Pou4f2"
+# RCVRN only
+seu_obj_mm$exp_group[WhichCells(seu_obj_mm, expression = Pou4f2 <= 0 & Rcvrn > 0)] <- "Rcvrn"
+```
+
+### Plots
+
+Dot plot output: 2000px \* 1200px
+
+```{r}
+seu_obj_mm_sub <- subset(seu_obj_mm, subset = exp_group != "Others")
+
+DotPlot(
+  seu_obj_mm_sub,
+  features = mk_photoreceptor,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Photoreceptors", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "Pou4f2" = expression("Pou4f2"^"+"),
+    "Pou4f2/Rcvrn" = expression("Pou4f2"^"+" ~ "/ Rcvrn"^"+"),
+    "Rcvrn" = expression("Rcvrn"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3a.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_mm_sub,
+  features = mk_rod,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Rods", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "Pou4f2" = expression("Pou4f2"^"+"),
+    "Pou4f2/Rcvrn" = expression("Pou4f2"^"+" ~ "/ Rcvrn"^"+"),
+    "Rcvrn" = expression("Rcvrn"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3b.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_mm_sub,
+  features = mk_cone,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Cones", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "Pou4f2" = expression("Pou4f2"^"+"),
+    "Pou4f2/Rcvrn" = expression("Pou4f2"^"+" ~ "/ Rcvrn"^"+"),
+    "Rcvrn" = expression("Rcvrn"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3c.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+```
+
+## Human Retinas
+
+### Load data
+
+```{r}
+#| include: false
+#| 
+seu_obj_hs <- readRDS(paste0(getwd(), "/processed_dataset/HsRetina_filtered_integrated.rds"))
+```
+
+### Define cell markers
+
+```{r}
+mk_photoreceptor <- toupper(mk_photoreceptor)
+mk_rod <- toupper(mk_rod)
+mk_cone <- toupper(mk_cone)
+```
+
+### Group assignment
+
+```{r}
+# All
+seu_obj_hs$exp_group <- "Others"
+# POU4F2 and RCVRN
+seu_obj_hs$exp_group[WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN > 0)] <- "POU4F2/RCVRN"
+# POU4F2 only
+seu_obj_hs$exp_group[WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN <= 0)] <- "POU4F2"
+# RCVRN only
+seu_obj_hs$exp_group[WhichCells(seu_obj_hs, expression = POU4F2 <= 0 & RCVRN > 0)] <- "RCVRN"
+```
+
+### Plots
+
+Dot plot output: 2000px \* 1200px
+
+```{r}
+seu_obj_hs_sub <- subset(seu_obj_hs, subset = exp_group != "Others")
+
+DotPlot(
+  seu_obj_hs_sub,
+  features = mk_photoreceptor,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Photoreceptors", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3d.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_hs_sub,
+  features = mk_rod,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Rods", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3e.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_hs_sub,
+  features = mk_cone,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Cones", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3f.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+```
+
+## Human Retinal Organoids
+
+### Load data
+
+```{r}
+#| include: false
+#| 
+seu_obj_hsro <- readRDS(paste0(getwd(), "/processed_dataset/HsRO_filtered_integrated.rds"))
+```
+
+### Define cell markers
+
+```{r}
+mk_photoreceptor <- toupper(mk_photoreceptor)
+mk_rod <- toupper(mk_rod)
+mk_cone <- toupper(mk_cone)
+```
+
+### Group assignment
+
+```{r}
+# All
+seu_obj_hsro$exp_group <- "Others"
+# POU4F2 and RCVRN
+seu_obj_hsro$exp_group[WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN > 0)] <- "POU4F2/RCVRN"
+# POU4F2 only
+seu_obj_hsro$exp_group[WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN <= 0)] <- "POU4F2"
+# RCVRN only
+seu_obj_hsro$exp_group[WhichCells(seu_obj_hsro, expression = POU4F2 <= 0 & RCVRN > 0)] <- "RCVRN"
+```
+
+### Plots
+
+Dot plot output: 2000px \* 1200px
+
+```{r}
+seu_obj_hsro_sub <- subset(seu_obj_hsro, subset = exp_group != "Others")
+
+DotPlot(
+  seu_obj_hsro_sub,
+  features = mk_photoreceptor,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Photoreceptors", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3g.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_hsro_sub,
+  features = mk_rod,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Rods", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3h.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_hsro_sub,
+  features = mk_cone,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Cones", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  scale_color_gradient(low = "white", high = "navy", labels = scales::label_number(accuracy = 0.1)) +
+  scale_size_continuous(labels = scales::label_number(accuracy = 1))+
+  guides(size = guide_legend(order = 1), color = guide_colorbar(order = 2))+
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f3i.tiff", path = figure_output, width = 2000, height = 1200, units = "px", dpi = 300)
+```

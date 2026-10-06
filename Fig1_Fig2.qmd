@@ -1,0 +1,262 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+figure_output <- paste0(getwd(), "/figures")
+```
+
+## Mouse Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_mm <- readRDS(paste0("processed_dataset/MmRetina_filtered_integrated.rds"))
+```
+
+### Plots
+
+Feature plot output: 1500px \* 900px
+
+```{r}
+FeaturePlot(seu_obj_mm, features = "Pou4f2", reduction = "umap.cca", order = TRUE)
+ggsave(filename = "f2a_1.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+FeaturePlot(seu_obj_mm, features = "Rcvrn", reduction = "umap.cca", order = TRUE)
+ggsave(filename = "f2a_2.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+cells_coexp <- WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn > 0)
+DimPlot(seu_obj_mm, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("Pou4f2"^"+"~"/Rcvrn"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f2b.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+```
+
+### Counts matrix
+
+```{r}
+query_age <- c("E14", "E16", "E18", "P0", "P30")
+
+# Pou4f2
+cells1 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Pou4f2 > 0 & age == query_age[i])))
+})
+
+# Rcvrn
+cells2 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Rcvrn > 0 & age == query_age[i])))
+})
+
+# Pou4f2 / Rcvrn
+cells3 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Pou4f2 > 0 & Rcvrn > 0 & age == query_age[i])))
+})
+
+cells_df <- data.frame(
+  Mouse_Age = query_age,
+  Pou4f2 = cells1, 
+  Rcvrn = cells2, 
+  Pou4f2_Rcvrn = cells3
+)
+
+cells_percent_df <- data.frame(
+  Pou4f2_Rcvrn_by_Pou4f2 = ifelse(cells_df[, 2] == 0, NA, (cells_df[, 4]/cells_df[, 2]) * 100),
+  Pou4f2_Rcvrn_by_Rcvrn = ifelse(cells_df[, 3] == 0, NA, (cells_df[, 4]/cells_df[, 3]) * 100)
+)
+
+cells_df <- cbind(cells_df, cells_percent_df)
+cells_df_t <- as.data.frame(t(cells_df))
+
+cells_sum_df <- data.frame(
+  Merge = c(
+    "Merge", 
+    sum(cells1), 
+    sum(cells2),
+    sum(cells3),
+    ifelse(sum(cells1) == 0, NA, sum(cells3)/sum(cells1) * 100),
+    ifelse(sum(cells2) == 0, NA, sum(cells3)/sum(cells2) * 100)
+  )
+)
+
+cells_df <- cbind(cells_df_t, cells_sum_df)
+cells_df_mm <- cells_df
+write_csv(cbind(rownames = rownames(cells_df_mm), cells_df_mm), file = "figures/f2c.csv")
+cells_df_mm
+```
+
+## Human Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_hs <- readRDS("processed_dataset/HsRetina_filtered_integrated.rds")
+```
+
+### Plots
+
+Feature plot output: 1500px \* 900px
+
+```{r}
+FeaturePlot(seu_obj_hs, features = "POU4F2", reduction = "umap.cca", order = TRUE)
+ggsave(filename = "f2d_1.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+FeaturePlot(seu_obj_hs, features = "RCVRN", reduction = "umap.cca", order = TRUE)
+ggsave(filename = "f2d_2.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+cells_coexp <- WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN > 0)
+DimPlot(seu_obj_hs, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("POU4F2"^"+"~"/RCVRN"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f2e.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+```
+
+### Counts matrix
+
+```{r}
+query_age <- c("79D", "137D", "162D")
+
+# Pou4f2
+cells1 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (POU4F2 > 0 & age == query_age[i])))
+})
+
+# Rcvrn
+cells2 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (RCVRN > 0 & age == query_age[i])))
+})
+
+# Pou4f2 / Rcvrn
+cells3 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (POU4F2 > 0 & RCVRN > 0 & age == query_age[i])))
+})
+
+cells_df <- data.frame(
+  Human_Fetus_Age = query_age,
+  POU4F2 = cells1, 
+  RCVRN = cells2, 
+  POU4F2_RCVRN = cells3
+)
+
+cells_percent_df <- data.frame(
+  POU4F2_RCVRN_by_POU4F2 = ifelse(cells_df[, 2] == 0, NA, (cells_df[, 4]/cells_df[, 2]) * 100),
+  POU4F2_RCVRN_by_RCVRN = ifelse(cells_df[, 3] == 0, NA, (cells_df[, 4]/cells_df[, 3]) * 100)
+)
+
+cells_df <- cbind(cells_df, cells_percent_df)
+cells_df_t <- as.data.frame(t(cells_df))
+
+cells_sum_df <- data.frame(
+  Merge = c(
+    "Merge", 
+    sum(cells1), 
+    sum(cells2),
+    sum(cells3),
+    ifelse(sum(cells1) == 0, NA, sum(cells3)/sum(cells1) * 100),
+    ifelse(sum(cells2) == 0, NA, sum(cells3)/sum(cells2) * 100)
+  )
+)
+
+cells_df <- cbind(cells_df_t, cells_sum_df)
+cells_df_hs <- cells_df
+write_csv(cbind(rownames = rownames(cells_df_hs), cells_df_hs), file = "figures/f2f.csv")
+cells_df_hs
+```
+
+## Human Retinal Organoids
+
+### Load data
+
+```{r}
+#| include: false
+#| 
+seu_obj_hsro <- readRDS("processed_dataset/HsRO_filtered_integrated.rds")
+```
+
+### Plots
+
+Feature plot output: 1500px \* 900px
+
+```{r}
+FeaturePlot(seu_obj_hsro, features = "POU4F2", reduction = "umap.cca", order = TRUE)
+ggsave(filename = "f1b_1.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+FeaturePlot(seu_obj_hsro, features = "RCVRN", reduction = "umap.cca", order = TRUE)
+ggsave(filename = "f1b_2.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+cells_coexp <- WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN > 0)
+DimPlot(seu_obj_hsro, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("POU4F2"^"+"~"/RCVRN"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f1c.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+```
+
+### Counts matrix
+
+```{r}
+query_age <- c("D60", "D90")
+
+# Pou4f2
+cells1 <- sapply(1:length(unique(seu_obj_hsro$age)), function(i){
+  length(WhichCells(seu_obj_hsro, expression = (POU4F2 > 0 & age == query_age[i])))
+})
+
+# Rcvrn
+cells2 <- sapply(1:length(unique(seu_obj_hsro$age)), function(i){
+  length(WhichCells(seu_obj_hsro, expression = (RCVRN > 0 & age == query_age[i])))
+})
+
+# Pou4f2 / Rcvrn
+cells3 <- sapply(1:length(unique(seu_obj_hsro$age)), function(i){
+  length(WhichCells(seu_obj_hsro, expression = (POU4F2 > 0 & RCVRN > 0 & age == query_age[i])))
+})
+
+cells_df <- data.frame(
+  Human_Organoid_Age = query_age,
+  POU4F2 = cells1, 
+  RCVRN = cells2, 
+  POU4F2_RCVRN = cells3
+)
+
+cells_percent_df <- data.frame(
+  POU4F2_RCVRN_by_POU4F2 = ifelse(cells_df[, 2] == 0, NA, (cells_df[, 4]/cells_df[, 2]) * 100),
+  POU4F2_RCVRN_by_RCVRN = ifelse(cells_df[, 3] == 0, NA, (cells_df[, 4]/cells_df[, 3]) * 100)
+)
+
+cells_df <- cbind(cells_df, cells_percent_df)
+cells_df_t <- as.data.frame(t(cells_df))
+
+cells_sum_df <- data.frame(
+  Merge = c(
+    "Merge", 
+    sum(cells1), 
+    sum(cells2),
+    sum(cells3),
+    ifelse(sum(cells1) == 0, NA, sum(cells3)/sum(cells1) * 100),
+    ifelse(sum(cells2) == 0, NA, sum(cells3)/sum(cells2) * 100)
+  )
+)
+
+cells_df <- cbind(cells_df_t, cells_sum_df)
+cells_df_hsro <- cells_df
+write_csv(cbind(rownames = rownames(cells_df_hsro), cells_df_hsro), file = "figures/f1d.csv")
+cells_df_hsro
+```

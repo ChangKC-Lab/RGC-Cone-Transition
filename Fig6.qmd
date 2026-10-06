@@ -1,0 +1,112 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+figure_output <- paste0(getwd(), "/figures")
+```
+
+## Mouse Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_mm <- readRDS(paste0("processed_dataset/MmRetina_filtered_integrated.rds"))
+```
+
+### Plots
+
+Feature plot output: 1500px \* 900px
+
+```{r}
+cells_coexp <- WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn > 0 & Opn4 > 0)
+DimPlot(seu_obj_mm, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("Pou4f2"^"+"~"/Rcvrn"^"+"~"/Opn4"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f6a_1.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+cells_coexp <- WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn > 0 & Opn1sw > 0)
+DimPlot(seu_obj_mm, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("Pou4f2"^"+"~"/Rcvrn"^"+"~"/Opn1sw"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f6a_2.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+```
+
+## Human Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_hs <- readRDS("processed_dataset/HsRetina_filtered_integrated.rds")
+```
+
+### Plots
+
+Feature plot output: 1500px \* 900px
+
+```{r}
+cells_coexp <- WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN > 0 & OPN4 > 0)
+DimPlot(seu_obj_hs, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("POU4F2"^"+"~"/RCVRN"^"+"~"/OPN4"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f6b_1.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+cells_coexp <- WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN > 0 & OPN1SW > 0)
+DimPlot(seu_obj_hs, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("POU4F2"^"+"~"/RCVRN"^"+"~"/OPN1SW"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f6b_2.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+```
+
+## Human Retinal Organoids
+
+### Load data
+
+```{r}
+#| include: false
+#| 
+seu_obj_hsro <- readRDS("processed_dataset/HsRO_filtered_integrated.rds")
+```
+
+### Plots
+
+Feature plot output: 1500px \* 900px
+
+```{r}
+cells_coexp <- WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN > 0 & OPN1SW > 0) # No OPN4
+DimPlot(seu_obj_hsro, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("POU4F2"^"+"~"/RCVRN"^"+"~"/OPN4"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f6c_1.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+
+cells_coexp <- WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN > 0 & OPN1SW > 0)
+DimPlot(seu_obj_hsro, reduction = "umap.cca", cells.highlight = cells_coexp, order = TRUE) +
+  ggtitle(expression("POU4F2"^"+"~"/RCVRN"^"+"~"/OPN1SW"^"+")) +
+  NoLegend() +
+  theme(plot.title = element_text(hjust = 0.5)
+  )
+ggsave(filename = "f6c_2.tiff", path = figure_output, width = 1500, height = 900, units = "px", dpi = 300)
+```

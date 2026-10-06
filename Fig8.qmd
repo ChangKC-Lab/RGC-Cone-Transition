@@ -1,0 +1,277 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+figure_output <- paste0(getwd(), "/figures")
+```
+
+### Define cell markers
+
+```{r}
+mk_rgc <- c("Isl1", "Pou4f1", "Pou4f2", "Pou6f2", "Elavl4", "Elovl4", "Ebf1", "Ebf2", "Rbpms", "Stmn3", "Atoh7")
+mk_rgc_subtype <- c("Satb1", "Foxp1", "Foxp2")
+mk_axon_guidance <- c("Dcc", "Nrp1", "Plxnc1", "Igfbpl1",  "Plxnb2", "Vldlr", "Fgfr1op2", "Fgfr1op", "Dscam", "Nrxn3", "Nrxn2", "Nrxn1", "Ephb1", "Igf1r", "App", "Lrrc4c", "Robo2")
+```
+
+## Mouse Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_mm <- readRDS(paste0(getwd(), "/processed_dataset/MmRetina_filtered_integrated.rds"))
+```
+
+### Group assignment
+
+```{r}
+# All
+seu_obj_mm$exp_group <- "Others"
+# POU4F2 and RCVRN
+seu_obj_mm$exp_group[WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn > 0)] <- "Pou4f2/Rcvrn"
+# POU4F2 only
+seu_obj_mm$exp_group[WhichCells(seu_obj_mm, expression = Pou4f2 > 0 & Rcvrn <= 0)] <- "Pou4f2"
+# RCVRN only
+seu_obj_mm$exp_group[WhichCells(seu_obj_mm, expression = Pou4f2 <= 0 & Rcvrn > 0)] <- "Rcvrn"
+```
+
+### Plots
+
+Dot plot output: 2200px \* 1800px
+
+```{r}
+seu_obj_mm_sub <- subset(seu_obj_mm, subset = exp_group != "Others")
+
+DotPlot(
+  seu_obj_mm_sub,
+  features = c(mk_rgc, mk_rgc_subtype),
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "RGCs", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "Pou4f2" = expression("Pou4f2"^"+"),
+    "Pou4f2/Rcvrn" = expression("Pou4f2"^"+" ~ "/ Rcvrn"^"+"),
+    "Rcvrn" = expression("Rcvrn"^"+")
+  )) +
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f8a.tiff", path = figure_output, width = 2200, height = 1800, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_mm_sub,
+  features = mk_axon_guidance,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Axon guidance", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "Pou4f2" = expression("Pou4f2"^"+"),
+    "Pou4f2/Rcvrn" = expression("Pou4f2"^"+" ~ "/ Rcvrn"^"+"),
+    "Rcvrn" = expression("Rcvrn"^"+")
+  )) +
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f8b.tiff", path = figure_output, width = 2200, height = 1800, units = "px", dpi = 300)
+```
+
+## Human Retinas
+
+### Load data
+
+```{r}
+#| include: false
+#| 
+seu_obj_hs <- readRDS(paste0(getwd(), "/processed_dataset/HsRetina_filtered_integrated.rds"))
+```
+
+### Define cell markers
+
+```{r}
+mk_rgc <- toupper(mk_rgc)
+mk_rgc_subtype <- toupper(mk_rgc_subtype)
+mk_axon_guidance <- toupper(mk_axon_guidance)
+```
+
+### Group assignment
+
+```{r}
+# All
+seu_obj_hs$exp_group <- "Others"
+# POU4F2 and RCVRN
+seu_obj_hs$exp_group[WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN > 0)] <- "POU4F2/RCVRN"
+# POU4F2 only
+seu_obj_hs$exp_group[WhichCells(seu_obj_hs, expression = POU4F2 > 0 & RCVRN <= 0)] <- "POU4F2"
+# RCVRN only
+seu_obj_hs$exp_group[WhichCells(seu_obj_hs, expression = POU4F2 <= 0 & RCVRN > 0)] <- "RCVRN"
+```
+
+### Plots
+
+Dot plot output: 2200px \* 1800px
+
+```{r}
+seu_obj_hs_sub <- subset(seu_obj_hs, subset = exp_group != "Others")
+
+DotPlot(
+  seu_obj_hs_sub,
+  features = c(mk_rgc, mk_rgc_subtype),
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "RGCs", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f8c.tiff", path = figure_output, width = 2200, height = 1800, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_hs_sub,
+  features = mk_axon_guidance,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Axon guidance", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f8d.tiff", path = figure_output, width = 2200, height = 1800, units = "px", dpi = 300)
+```
+
+## Human Retinal Organoids
+
+### Load data
+
+```{r}
+#| include: false
+#| 
+seu_obj_hsro <- readRDS(paste0(getwd(), "/processed_dataset/HsRO_filtered_integrated.rds"))
+```
+
+### Define cell markers
+
+```{r}
+mk_rgc <- toupper(mk_rgc)
+mk_rgc_subtype <- toupper(mk_rgc_subtype)
+mk_axon_guidance <- toupper(mk_axon_guidance)
+```
+
+### Group assignment
+
+```{r}
+# All
+seu_obj_hsro$exp_group <- "Others"
+# POU4F2 and RCVRN
+seu_obj_hsro$exp_group[WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN > 0)] <- "POU4F2/RCVRN"
+# POU4F2 only
+seu_obj_hsro$exp_group[WhichCells(seu_obj_hsro, expression = POU4F2 > 0 & RCVRN <= 0)] <- "POU4F2"
+# RCVRN only
+seu_obj_hsro$exp_group[WhichCells(seu_obj_hsro, expression = POU4F2 <= 0 & RCVRN > 0)] <- "RCVRN"
+```
+
+### Plots
+
+Dot plot output: 2200px \* 1800px
+
+```{r}
+seu_obj_hsro_sub <- subset(seu_obj_hsro, subset = exp_group != "Others")
+
+DotPlot(
+  seu_obj_hsro_sub,
+  features = c(mk_rgc, mk_rgc_subtype),
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "RGCs", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f8e.tiff", path = figure_output, width = 2200, height = 1800, units = "px", dpi = 300)
+
+DotPlot(
+  seu_obj_hsro_sub,
+  features = mk_axon_guidance,
+  group.by = "exp_group",
+  cols = c("white", "navy"),
+  scale = FALSE
+) +
+  labs(title = "Axon guidance", x = NULL, y = NULL) +
+  scale_y_discrete(labels = c(
+    "POU4F2" = expression("POU4F2"^"+"),
+    "POU4F2/RCVRN" = expression("POU4F2"^"+" ~ "/ RCVRN"^"+"),
+    "RCVRN" = expression("RCVRN"^"+")
+  )) +
+  coord_flip() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(face = "bold"),
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(face = "bold"),
+    axis.ticks = element_line(linewidth = 1),
+    legend.title = element_blank()
+  )
+ggsave(filename = "f8f.tiff", path = figure_output, width = 2200, height = 1800, units = "px", dpi = 300)
+```

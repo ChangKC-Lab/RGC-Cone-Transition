@@ -1,0 +1,8 @@
+rownames,1,2,3,4,5,Merge
+Mouse_Age,E14,E16,E18,P0,P30,Merge
+Opn4,26, 4,25,38, 0,93
+Opn1sw,   5,   8,1241,1950, 778,3982
+Opn1mw,  0,  0,  1,  1,651,653
+Pou4f2_Rcvrn_Opn4,0,0,0,0,0,0
+Pou4f2_Rcvrn_Opn1sw,0,0,1,9,0,10
+Pou4f2_Rcvrn_Opn1mw,0,0,0,0,0,0

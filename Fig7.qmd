@@ -1,0 +1,223 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+figure_output <- paste0(getwd(), "/figures")
+```
+
+## Mouse Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_mm <- readRDS(paste0("processed_dataset/MmRetina_filtered_integrated.rds"))
+```
+
+### Counts matrix
+
+```{r}
+query_age <- c("E14", "E16", "E18", "P0", "P30")
+
+# Opn4
+cells1 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Opn4 > 0 & age == query_age[i])))
+})
+
+# Opn1sw
+cells2 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Opn1sw > 0 & age == query_age[i])))
+})
+
+# Opn1mw
+cells3 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Opn1mw > 0 & age == query_age[i])))
+})
+
+# Pou4f2 / Rcvrn / Opn4
+cells4 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Pou4f2 > 0 & Rcvrn > 0 & Opn4 > 0 & age == query_age[i])))
+})
+
+# Pou4f2 / Rcvrn / Opn1sw
+cells5 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Pou4f2 > 0 & Rcvrn > 0 & Opn1sw > 0 & age == query_age[i])))
+})
+
+# Pou4f2 / Rcvrn / Opn1mw
+cells6 <- sapply(1:length(unique(seu_obj_mm$age)), function(i){
+  length(WhichCells(seu_obj_mm, expression = (Pou4f2 > 0 & Rcvrn > 0 & Opn1mw > 0 & age == query_age[i])))
+})
+
+cells_df <- data.frame(
+  Mouse_Age = query_age,
+  Opn4 = cells1,
+  Opn1sw = cells2,
+  Opn1mw = cells3,
+  Pou4f2_Rcvrn_Opn4 = cells4,
+  Pou4f2_Rcvrn_Opn1sw = cells5,
+  Pou4f2_Rcvrn_Opn1mw = cells6
+)
+
+cells_df_t <- t(cells_df)
+
+cells_sum_df <- data.frame(
+  Merge = c(
+    "Merge", 
+    sum(cells1), 
+    sum(cells2),
+    sum(cells3),
+    sum(cells4), 
+    sum(cells5),
+    sum(cells6)
+  )
+)
+
+cells_df <- cbind(cells_df_t, cells_sum_df)
+cells_df_mm <- cells_df
+write_csv(cbind(rownames = rownames(cells_df_mm), cells_df_mm), file = "figures/f7a.csv")
+cells_df_mm
+```
+
+## Human Retinas
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_hs <- readRDS("processed_dataset/HsRetina_filtered_integrated.rds")
+```
+
+### Counts matrix
+
+```{r}
+query_age <- c("79D", "137D", "162D")
+
+# OPN4
+cells1 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (OPN4 > 0 & age == query_age[i])))
+})
+
+# OPN1SW
+cells2 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (OPN1SW > 0 & age == query_age[i])))
+})
+
+# OPN1MW
+cells3 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (OPN1MW > 0 & age == query_age[i])))
+})
+
+# POU4F2 / RCVRN / OPN4
+cells4 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (POU4F2 > 0 & RCVRN > 0 & OPN4 > 0 & age == query_age[i])))
+})
+
+# POU4F2 / RCVRN / OPN1SW
+cells5 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (POU4F2 > 0 & RCVRN > 0 & OPN1SW > 0 & age == query_age[i])))
+})
+
+# POU4F2 / RCVRN / OPN1MW
+cells6 <- sapply(1:length(unique(seu_obj_hs$age)), function(i){
+  length(WhichCells(seu_obj_hs, expression = (POU4F2 > 0 & RCVRN > 0 & OPN1MW > 0 & age == query_age[i])))
+})
+
+cells_df <- data.frame(
+  Human_Fetus_Age = query_age,
+  OPN4 = cells1, 
+  OPN1SW = cells2, 
+  OPN1MW = cells3, 
+  POU4F2_RCVRN_OPN4 = cells4,
+  POU4F2_RCVRN_OPN1SW = cells5,
+  POU4F2_RCVRN_OPN1MW = cells6
+)
+
+cells_df_t <- t(cells_df)
+
+cells_sum_df <- data.frame(
+  Merge = c(
+    "Merge", 
+    sum(cells1), 
+    sum(cells2),
+    sum(cells3),
+    sum(cells4), 
+    sum(cells5),
+    sum(cells6)
+  )
+)
+
+cells_df <- cbind(cells_df_t, cells_sum_df)
+cells_df_hs <- cells_df
+write_csv(cbind(rownames = rownames(cells_df_hs), cells_df_hs), file = "figures/f7b.csv")
+cells_df_hs
+```
+
+## Human Retinal Organoids
+
+### Load data
+
+```{r}
+#| include: false
+
+seu_obj_hsro <- readRDS("processed_dataset/HsRO_filtered_integrated.rds")
+```
+
+### Counts matrix
+
+```{r}
+query_age <- c("D60", "D90")
+
+# OPN4 (No OPN4)
+cells1 <- 0
+
+# OPN1SW
+cells2 <- sapply(1:length(unique(seu_obj_hsro$age)), function(i){
+  length(WhichCells(seu_obj_hsro, expression = (OPN1SW > 0 & age == query_age[i])))
+})
+
+# POU4F2 / RCVRN / OPN4 (No OPN4)
+cells3 <- 0
+
+# POU4F2 / RCVRN / OPN1SW
+cells4 <- sapply(1:length(unique(seu_obj_hsro$age)), function(i){
+  length(WhichCells(seu_obj_hsro, expression = (POU4F2 > 0 & RCVRN > 0 & OPN1SW > 0 & age == query_age[i])))
+})
+
+cells_df <- data.frame(
+  Human_Organoid_Age = query_age,
+  OPN4 = cells1, 
+  OPN1SW = cells2, 
+  POU4F2_RCVRN_OPN4 = cells3,
+  POU4F2_RCVRN_OPN1SW = cells4
+)
+
+cells_df_t <- t(cells_df)
+
+cells_sum_df <- data.frame(
+  Merge = c(
+    "Merge", 
+    sum(cells1), 
+    sum(cells2),
+    sum(cells3),
+    sum(cells4)
+  )
+)
+
+cells_df <- cbind(cells_df_t, cells_sum_df)
+cells_df_hsro <- cells_df
+write_csv(cbind(rownames = rownames(cells_df_hsro), cells_df_hsro), file = "figures/f7c.csv")
+cells_df_hsro
+```

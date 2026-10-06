@@ -1,0 +1,191 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Import libraries
+
+```{r}
+#| include: false
+
+library(Seurat)
+library(tidyverse)
+
+set.seed(3345678)
+```
+
+## Mouse retina
+
+### Load data
+
+Datasets: GSE277570, GSE254524, GSE118614
+
+```{r}
+#| include: false
+
+# S1
+dataset <- paste0(getwd(), "/dataset/GSE277570_1/")
+counts <- Read10X(data.dir = dataset)
+seu_obj_mm_1 <- CreateSeuratObject(counts = counts, project = "Mouse retina", min.cells = 3)
+seu_obj_mm_1$sample <- ""
+seu_obj_mm_1$age <- "P0"
+seu_obj_mm_1$species <- "Mouse"
+
+# S2
+dataset <- paste0(getwd(), "/dataset/GSE277570_2/")
+counts <- Read10X(data.dir = dataset)
+seu_obj_mm_2 <- CreateSeuratObject(counts = counts, project = "Mouse retina", min.cells = 3)
+seu_obj_mm_2$sample <- ""
+seu_obj_mm_2$age <- "P0"
+seu_obj_mm_2$species <- "Mouse"
+
+# S3
+dataset <- paste0(getwd(), "/dataset/GSE254524_1/")
+counts <- Read10X(data.dir = dataset)
+seu_obj_mm_3 <- CreateSeuratObject(counts = counts, project = "Mouse retina", min.cells = 3)
+seu_obj_mm_3$sample <- ""
+seu_obj_mm_3$age <- "P30"
+seu_obj_mm_3$species <- "Mouse"
+
+# S4
+dataset <- paste0(getwd(), "/dataset/GSE254524_2/")
+counts <- Read10X(data.dir = dataset)
+seu_obj_mm_4 <- CreateSeuratObject(counts = counts, project = "Mouse retina", min.cells = 3)
+seu_obj_mm_4$sample <- ""
+seu_obj_mm_4$age <- "P30"
+seu_obj_mm_4$species <- "Mouse"
+
+# S5
+dataset <- paste0(getwd(), "/dataset/GSE118614/")
+counts <- Read10X(data.dir = dataset)
+seu_obj_mm_5 <- CreateSeuratObject(counts = counts, project = "Mouse retina", min.cells = 3)
+
+meta <- read.delim(file = paste0(dataset, "metadata.tsv.gz"), row.names = 2)
+meta$row.names <- NULL
+seu_obj_mm_5 <- AddMetaData(object = seu_obj_mm_5, metadata = meta[, c("sample", "age", "umap2_CellType")])
+seu_obj_mm_5$previous_labeled_cell_type <- seu_obj_mm_5$umap2_CellType
+seu_obj_mm_5$umap2_CellType <- NULL
+seu_obj_mm_5 <- subset(seu_obj_mm_5, subset = age %in% c("E14", "E16", "E18"))
+
+seu_obj_mm_5 <- SplitObject(seu_obj_mm_5, split.by = "sample")
+```
+
+### QC and filtration
+
+```{r}
+#| echo: false
+
+seu_obj_mm_1[["percent.mt"]] <- PercentageFeatureSet(seu_obj_mm_1, pattern = "^mt-")
+seu_obj_mm_1_filtered <- subset(seu_obj_mm_1, subset = nFeature_RNA > 200 & nFeature_RNA < 6000 & percent.mt < 10)
+
+seu_obj_mm_2[["percent.mt"]] <- PercentageFeatureSet(seu_obj_mm_2, pattern = "^mt-")
+seu_obj_mm_2_filtered <- subset(seu_obj_mm_2, subset = nFeature_RNA > 200 & nFeature_RNA < 6000 & percent.mt < 10)
+
+seu_obj_mm_3[["percent.mt"]] <- PercentageFeatureSet(seu_obj_mm_3, pattern = "^mt-")
+seu_obj_mm_3_filtered <- subset(seu_obj_mm_3, subset = nFeature_RNA > 200 & nFeature_RNA < 6000 & percent.mt < 10)
+
+seu_obj_mm_4[["percent.mt"]] <- PercentageFeatureSet(seu_obj_mm_4, pattern = "^mt-")
+seu_obj_mm_4_filtered <- subset(seu_obj_mm_4, subset = nFeature_RNA > 200 & nFeature_RNA < 6000 & percent.mt < 10)
+```
+
+### Preprocessing
+
+```{r}
+#| include: false
+
+seu_obj_mm_list <- c(list(seu_obj_mm_1_filtered, seu_obj_mm_2_filtered, seu_obj_mm_3_filtered, seu_obj_mm_4_filtered), seu_obj_mm_5[1:5])
+seu_obj_mm_list <- lapply(seu_obj_mm_list, function(x) {
+  x <- NormalizeData(x) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% FindNeighbors(dims = 1:30) %>% FindClusters(resolution = 0.2)
+  return(x)
+})
+```
+
+### Doublets removal
+
+```{r}
+#| echo: false
+
+library(DoubletFinder)
+
+# Doulets should use a list to analyze
+
+# 10X multiplet rate estimation table
+get_10x_multiplet_rate <- function(cells_recovered) {
+  cells <- c(500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000)
+  rate  <- c(0.004, 0.008, 0.016, 0.023, 0.031, 0.039, 0.046, 0.054, 0.061, 0.069, 0.076)
+  
+  if (cells_recovered <= max(cells)) {
+    rate <- approx(
+      x = cells,
+      y = rate,
+      xout = cells_recovered,
+      rule = 2
+    )$y
+  } else {
+    rate <- (cells_recovered / 1000) * 0.008
+  }
+  return(rate)
+}
+
+est_rate <- sapply(seu_obj_mm_list, function(x) {
+  cells_recovered <- ncol(x)
+  return(get_10x_multiplet_rate(cells_recovered))
+})
+
+# pK Identification (no ground-truth)
+seu_obj_mm_list <- lapply(seq_along(seu_obj_mm_list), function(i) {
+  
+  set.seed(42)
+  
+  x <- seu_obj_mm_list[[i]]
+  sweep_list <- paramSweep(x, PCs = 1:30, sct = FALSE)
+  sweep_stats <- summarizeSweep(sweep_list, GT = FALSE)
+  bcmvn <- find.pK(sweep_stats)
+  pK <- bcmvn %>% filter(BCmetric == max(BCmetric)) %>% select(pK)
+  pK <- as.numeric(as.character(pK[[1]]))
+  
+  # Homotypic doublet proportion estimate
+  annotations <- x@meta.data$seurat_clusters
+  homotypic_prop <- modelHomotypic(annotations)
+  nExp_poi <- round(est_rate[i] * nrow(x@meta.data))
+  nExp_poi.adj <- round(nExp_poi * (1 - homotypic_prop))
+  
+  # Run DoubletFinder
+  x <- doubletFinder(
+    x,
+    PCs = 1:30,
+    pN = 0.25,
+    pK = pK,
+    nExp = nExp_poi.adj,
+    sct = FALSE
+  )
+  colnames(x@meta.data)[grepl("DF.classifications.*", colnames(x@meta.data))] <- "doublet_finder"
+  # Number of singlets and doublets
+  print(table(x@meta.data$doublet_finder))
+  # Removing doublets
+  x <- subset(x, subset = doublet_finder %in% "Singlet")
+  return(x)
+})
+```
+
+### Merge data and integration
+
+```{r}
+#| include: false
+seu_obj_mm <- merge(seu_obj_mm_list[[1]], y = seu_obj_mm_list[-1])
+
+seu_obj_mm <- NormalizeData(seu_obj_mm) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% FindNeighbors(dims = 1:30) %>% FindClusters(resolution = 0.2, cluster.name = "unintegrated_clusters") %>% RunUMAP(dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
+
+seu_obj_mm <- IntegrateLayers(object = seu_obj_mm, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca", verbose = FALSE)
+
+seu_obj_mm <- FindNeighbors(seu_obj_mm, reduction = "integrated.cca", dims = 1:30) %>% FindClusters(resolution = 0.2, cluster.name = "cca_clusters") %>% RunUMAP(reduction = "integrated.cca", dims = 1:30, reduction.name = "umap.cca")
+
+seu_obj_mm <- JoinLayers(seu_obj_mm)
+```
+
+```{r}
+#| include: false
+
+saveRDS(seu_obj_mm, file = "processed_dataset/MmRetina_filtered_integrated.rds")
+```
